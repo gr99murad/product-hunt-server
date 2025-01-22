@@ -62,6 +62,65 @@ async function run() {
       }
     });
 
+    // get product details
+    app.get('/products/:id', async(req, res) => {
+      const {id} = req.params;
+      try{
+        const product = await productsCollection.findOne({ _id: new ObjectId(id)});
+        res.send(product);
+
+      } catch (error){
+        console.error('Error fetching product details:', error);
+        res.send({message: 'Error fetching product details ', error});
+      }
+    });
+
+    // report a product
+    app.post('/report/:id', async(req, res) => {
+      const {id} = req.params;
+      const {userId} = req.body;
+      try{
+        await productsCollection.updateOne(
+          { _id: new ObjectId(id)},
+          { $push: { reportedBy: userId}}
+        );
+        res.send({ message: 'Product reported successfully'});
+      } catch(error){
+        console.error('Error reporting product', error);
+        res.send({ message: 'Error reporting product',error});
+      }
+    });
+
+    // post a review
+    const reviewsCollection = client.db('productHunt').collection('reviews');
+
+    app.post('/reviews', async (req, res) =>{
+      try{
+        const review = req.body;
+        const result = await reviewsCollection.insertOne(review);
+        res.send(result);
+
+      }catch(error){
+        console.error('Error posting review', error);
+        res.send({ message: 'Error posting review', error});
+
+      }
+    }); 
+
+    //get reviews for a product
+    app.get('/reviews/:productId', async (req, res) => {
+      const {productId} = req.params;
+      try{
+        const reviews = await reviewsCollection.find({ productId }).toArray();
+        res.send(reviews);
+
+      }catch(error){
+        console.error('Error fetching reviews', error);
+        res.send({ message: 'Error fetching reviews',error});
+
+      }
+    });
+
     app.post('/upvote/:id', async(req, res) => {
         const { id } = req.params;
         const { userId } = req.body;
