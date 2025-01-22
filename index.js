@@ -33,10 +33,28 @@ async function run() {
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
+    
+
+    
+    const productsCollection = client.db("productHunt").collection("products");
+    // get products with search and pagination
+    app.get('/products', async (req,res) => {
+      const { search = '', page=1, limit=6} = req.query;
+      const skip = (page - 1) * limit;
+
+      try{
+        const query = search? { tags: { $regex: search, $options: 'i'}} : {};
+
+        const products = await productsCollection.find(query).skip(skip).limit(parseInt(limit)).toArray();
+        const totalProducts = await productsCollection.countDocuments(query);
+        res.send({ products, totalPages: Math.ceil(totalProducts/limit)});
+      } catch(error){
+        console.error('Error fetching products:', error);
+        res.send({ message: 'Error fetching products', error});
+      }
+    });
 
     // get featured products
-    const productsCollection = client.db("productHunt").collection("products");
-
     app.get('/featured-products', async(req, res) => {
        try{
         
