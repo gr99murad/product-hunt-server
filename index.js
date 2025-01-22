@@ -49,6 +49,19 @@ async function run() {
        }
     });
 
+    // get  trending products api
+    app.get('/trendingProducts', async (req, res) => {
+      try{
+        const trendingProducts = await productsCollection.find({}).sort({ votes: -1}).limit(6).toArray();
+        res.send(trendingProducts);
+
+      } catch (error){
+        console.error("Error fetching trending products", error);
+        res.send({ message: "Error fetching trending products", error});
+
+      }
+    });
+
     app.post('/upvote/:id', async(req, res) => {
         const { id } = req.params;
         const { userId } = req.body;
