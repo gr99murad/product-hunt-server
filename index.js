@@ -3,7 +3,7 @@ const cors = require('cors');
 const app = express();
 require('dotenv').config();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
 
@@ -32,9 +32,46 @@ async function run() {
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
+
+    // get featured products
+    const productsCollection = client.db("productHunt").collection("products");
+
+    app.get('/featured-products', async(req, res) => {
+       try{
+        
+        const featuredProducts = await productsCollection.find({ isFeatured: true}).sort({ timestamp: -1}).limit(4).toArray();
+        res.send(featuredProducts);
+
+       }catch(error){
+        console.error("Error fetching featured products ", error);
+        res.send({message: "Error fetching featured products", error});
+       }
+    });
+
+    app.post('/upvote/:id', async(req, res) => {
+        const { id } = req.params;
+        const { userId } = req.body;
+
+        try{
+            const product = await productsCollection.findOne({ _id: new ObjectId(id)});
+
+            if(product.voteBy.includes(userId)){
+                return res.send({ message: "User has already voted"});
+            }
+            await productsCollection.updateOne(
+                { _id: new ObjectId(id)},
+                { $inc: { votes: 1}, $push: { votedBy: userId}}
+            );
+            res.send({ message: "Voted counted"});
+        } catch(error){
+            console.error("Error up voting product", error);
+            res.send({ message: "Error up voting product ", error});
+        }
+    })
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
@@ -43,6 +80,8 @@ run().catch(console.dir);
 app.get('/', (req, res) => {
     res.send('product hunt')
 })
+
+
 
 app.listen(port, () => {
     console.log(`product hunt: ${port}`)
