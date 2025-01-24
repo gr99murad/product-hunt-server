@@ -37,6 +37,71 @@ async function run() {
 
     
     const productsCollection = client.db("productHunt").collection("products");
+
+    // get products by a user
+    app.get('/myProducts/:userId', async (req, res) => {
+      const {userId} = req.params;
+
+     try{
+      const products = await productsCollection.find({ postedBy: userId}).project({ name:1, votes:1, status:1}).toArray();
+      res.send(products);
+     } catch(error){
+
+      console.error('Error fetching products for user:', error);
+      res.send({ message: 'Error fetching products', error});
+     }
+    });
+    // update product details
+    app.put('/products/:id', async(req, res) => {
+      const {id} = req.params;
+      const updatedProduct = req.body;
+
+      try{
+        const result = await productsCollection.updateOne({ _id: new ObjectId(id)}, { $set: updatedProduct});
+        res.send({ message: 'Product updated successfully', result});
+
+      }catch(error){
+        console.error('Error updating product', error);
+        res.send({ message: 'Error updating product', error});
+
+      }
+    });
+    
+    // delete product
+    app.delete('/products/:id', async(req, res) => {
+      const {id} = req.params;
+      try{
+        const result = await productsCollection.deleteOne({ _id: new ObjectId(id)});
+        res.send({ message: 'Product deleted successfully', result});
+
+      }catch(error){
+        console.error('Error deleting product', error);
+        res.send({ message: 'Error deleting product', error});
+
+      }
+    });
+
+    // Add a product
+    app.post('/products', async (req, res) => {
+      try {
+        const product = {
+          ...req.body,
+          postedBy: req.body.userId,
+          timestamp: new Date(),
+          votes: 0,
+          votedBy: [],
+          reportedBy: [],
+          status: 'pending',
+        };
+
+        const result = await productsCollection.insertOne(product);
+        res.send({ message: 'Product added successfully', result});
+        
+      }catch(error){
+        console.error({ message: 'Error added successfully', result});
+        res.send({ message: 'Error adding product', error});
+      }
+    })
     // get products with search and pagination
     app.get('/products', async (req,res) => {
       const { search = '', page=1, limit=6} = req.query;
@@ -138,15 +203,34 @@ async function run() {
 
       }
     });
+    // update user subscription
+    app.post('/subscribe/:id', async(req, res) => {
+      const {id} = req.params;
+
+      try{
+        const result = await client.db("productHunt").collection("users").updateOne({ _id: new ObjectId(id)}, { $set: {subscribed: true}});
+        res.send({ message: "subscription successful", result});
+
+      }catch(error){
+        console.error("Error updating subscription", error);
+        res.send({message: "subscription update failed", error});
+
+      }
+    })
 
     app.post('/upvote/:id', async(req, res) => {
         const { id } = req.params;
         const { userId } = req.body;
 
+
+        if(!userId){
+          return res.send({ message: "Invalid userId. Cannot be null or undefined"});
+        }
+
         try{
             const product = await productsCollection.findOne({ _id: new ObjectId(id)});
 
-            if(product.voteBy.includes(userId)){
+            if(product.votedBy.includes(userId)){
                 return res.send({ message: "User has already voted"});
             }
             await productsCollection.updateOne(
