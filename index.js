@@ -265,18 +265,42 @@ async function run() {
       const isExist = await usersCollection.findOne(query)
 
       if(isExist){
-        const result = await usersCollection.updateOne(query, { $set: user});
+
+        const updatedUser = {
+          ...user,
+          role: isExist.role,
+        };
+        const result = await usersCollection.updateOne(query, { $set: updatedUser});
         return res.send(result);
       }
-      const result = await usersCollection.insertOne({
-
+      const newUser = {
         ...user,
         role: 'user',
         timestamp: Date.now(),
-      })
+      };
+      const result = await usersCollection.insertOne(newUser);
       res.send(result)
 
-    })
+    });
+
+    // get users by email
+    app.get('/users/:email', async (req, res) =>{
+      const {email} = req.params;
+
+      try{
+        const user = await usersCollection.findOne({ email });
+        if(user){
+          res.send({ role: user.role, user});
+        }else{
+          res.send({ message: 'User not found'});
+        }
+
+      }catch(error){
+        console.error('Error fetching user details', error);
+        res.send({ message: 'Error fetching user details', error});
+
+      }
+    });
     
 
     app.post('/upvote/:id', async(req, res) => {
