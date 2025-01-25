@@ -35,15 +35,50 @@ async function run() {
 
     
 
-    
+   
     const productsCollection = client.db("productHunt").collection("products");
 
+    const authorize = (roles) => (req, res, next) =>{
+      const {user} = req.body;
+
+      if(!roles.includes(user?.role)){
+        return res.send({ message: 'Access denied'});
+      }
+      next();
+
+    };
+
+    // get moderator reviewQueue
+    app.get('/moderator/reviewQueue', authorize(['moderator']), async (req, res) => {
+      try{
+        const pendingProducts = await productsCollection.find({ status: 'pending'}).toArray();
+        res.send(pendingProducts);
+      } catch(error){
+        console.error('Error fetching review queue', error);
+        res.send({ message: 'Error fetching review queue', error})
+      }
+    });
+
+    // get admin statistics
+    app.get('/admin/statistics', authorize(['admin']), async (req, res) => {
+
+      try{
+        const productCount = await productsCollection.countDocuments();
+        const userCount = await client.db('productHunt').collection('users').countDocuments();
+        res.send({ productCount, userCount});
+      } catch(error){
+        console.error('Error fetching statistics', error);
+        res.send({ message: 'Error fetching statistics', error});
+      }
+    });
+
+
     // get products by a user
-    app.get('/myProducts/:userId', async (req, res) => {
-      const {userId} = req.params;
+    app.get('/myProducts/:uid', async (req, res) => {
+      const {uid} = req.params;
 
      try{
-      const products = await productsCollection.find({ postedBy: userId}).project({ name:1, votes:1, status:1}).toArray();
+      const products = await productsCollection.find({ postedBy: uid}).project({ name:1, votes:1, status:1}).toArray();
       res.send(products);
      } catch(error){
 
@@ -216,7 +251,33 @@ async function run() {
         res.send({message: "subscription update failed", error});
 
       }
+    });
+
+    const usersCollection = client.db("productHunt").collection("users");
+
+    // added user data in users collection
+    app.post('/users/:email', async(req, res) => {
+      const email = req.params.email
+      const query = {email}
+      const user = req.body
+
+      // check if user exists in db
+      const isExist = await usersCollection.findOne(query)
+
+      if(isExist){
+        const result = await usersCollection.updateOne(query, { $set: user});
+        return res.send(result);
+      }
+      const result = await usersCollection.insertOne({
+
+        ...user,
+        role: 'user',
+        timestamp: Date.now(),
+      })
+      res.send(result)
+
     })
+    
 
     app.post('/upvote/:id', async(req, res) => {
         const { id } = req.params;
