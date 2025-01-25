@@ -74,16 +74,20 @@ async function run() {
 
 
     // get products by a user
-    app.get('/myProducts/:uid', async (req, res) => {
-      const {uid} = req.params;
+    app.get('/products/owner/:email', async (req, res) => {
+      const {email} = req.params;
 
      try{
-      const products = await productsCollection.find({ postedBy: uid}).project({ name:1, votes:1, status:1}).toArray();
-      res.send(products);
+      const products = await productsCollection.find({ "owner.email": email}).toArray();
+      if(products.length > 0){
+        res.send(products);
+      }else{
+        res.send({ message: 'No products found for this owner'});
+      }
      } catch(error){
 
-      console.error('Error fetching products for user:', error);
-      res.send({ message: 'Error fetching products', error});
+      console.error('Error fetching products by owner email:', error);
+      res.send({ message: 'Error fetching products by owner email', error});
      }
     });
     // update product details
