@@ -90,13 +90,28 @@ async function run() {
       res.send({ message: 'Error fetching products by owner email', error});
      }
     });
-    // update product details
+
+    // update product info
     app.put('/products/:id', async(req, res) => {
       const {id} = req.params;
       const updatedProduct = req.body;
 
       try{
-        const result = await productsCollection.updateOne({ _id: new ObjectId(id)}, { $set: updatedProduct});
+        const result = await productsCollection.updateOne(
+          { _id: new ObjectId(id)},
+          {
+            $set: {
+              name: updatedProduct.name,
+              tags: updatedProduct.tags,
+              description: updatedProduct.description,
+              image: updatedProduct.image,
+            }
+          }
+        );
+
+        if(result.matchedCount === 0){
+          return res.send({ message: 'Product not found'});
+        }
         res.send({ message: 'Product updated successfully', result});
 
       }catch(error){
@@ -105,6 +120,7 @@ async function run() {
 
       }
     });
+   
     
     // delete product
     app.delete('/products/:id', async(req, res) => {
