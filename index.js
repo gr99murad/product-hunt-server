@@ -47,6 +47,31 @@ async function run() {
       next();
 
     };
+    // get all reported products
+    app.get('/reportedProducts', async (req, res) => {
+      try{
+        const reportedProducts = await productsCollection.find({ reportedBy: { $exists: true, $ne: [] }}).toArray();
+        res.send(reportedProducts);
+      }catch(error){
+        console.error('Error fetching reported products', error);
+        res.send({ message: 'Error fetching reported products', error});
+      }
+    });
+    // Delete a product by id
+    app.delete('/products/:id', async(req,res) => {
+      const {id} = req.params;
+      try{
+        const result = await productsCollection.deleteOne({ _id: new ObjectId(id)});
+        if(result.deletedCount === 1){
+          res.send({ message: 'Product deleted successfully'});
+        }else{
+          res.send({ message: 'product not found'});
+        }
+      }catch(error){
+        console.error('Error deleting product', error);
+        res.send({ message: 'Error deleting product', error});
+      }
+    })
     // moderator patch api for update product status
     app.patch('/products/:id/status', async(req, res) => {
       const {id} = req.params;
