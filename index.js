@@ -342,6 +342,35 @@ async function run() {
 
     const usersCollection = client.db("productHunt").collection("users");
 
+    // get users
+    app.get('/users', async (req, res) => {
+      try{
+        const users = await usersCollection.find().toArray();
+        res.send(users);
+      }catch(error){
+        console.error('Error fetching users', error);
+        res.send('Error fetching users', error);
+      }
+    })
+    // update user role
+    app.patch('/users/:email/role', async (req, res) => {
+      const {email} = req.params;
+      const { role} = req.body;
+
+      try{
+        const result = await usersCollection.updateOne({ email}, { $set: {role}});
+
+        if(result.matchedCount > 0 ){
+          res.send({ message: 'User role updated successfully', result});
+        }else{
+          res.send({ message: 'User not found'});
+        }
+      } catch(error){
+        console.error('Error updating user role', error);
+        res.send({ message: 'Error updating user role'});
+      }
+    });
+
     // added user data in users collection
     app.post('/users/:email', async(req, res) => {
       const email = req.params.email
