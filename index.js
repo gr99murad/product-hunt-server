@@ -47,11 +47,53 @@ async function run() {
       next();
 
     };
+    // moderator patch api for update product status
+    app.patch('/products/:id/status', async(req, res) => {
+      const {id} = req.params;
+      const {status} = req.body;
 
-    // get moderator reviewQueue
-    app.get('/moderator/reviewQueue', authorize(['moderator']), async (req, res) => {
       try{
-        const pendingProducts = await productsCollection.find({ status: 'pending'}).toArray();
+        const result = await productsCollection.updateOne( 
+          { _id: new ObjectId(id)},
+          { $set: {status}}
+        
+        );
+        if(result.matchedCount === 0){
+          return res.send({ message: 'Product not found'});
+        }
+        res.send({ message: 'Product status updated successfully', result});
+
+      }catch(error){
+        console.error('Error updating product status', error);
+        res.send({ message: 'Error updating product status', error});
+
+      }
+    });
+
+    // mark product as featured
+    app.patch('/products/:id/featured', async(req, res) => {
+      const { id } = req.params;
+
+      try{
+        const result = await productsCollection.updateOne(
+          { _id: new ObjectId(id)},
+          { $set: { isFeatured: true}}
+        );
+
+        if( result.matchedCount === 0){
+          return res.send({ message: 'Product not found'});
+        }
+      }catch(error){
+        console.error('Error marking product as featured', error);
+        res.send({ message: 'Error marking product as featured', error});
+      }
+    })
+
+
+    // post moderator reviewQueue
+    app.post('/moderator/reviewQueue', authorize(['moderator']), async (req, res) => {
+      try{
+        const pendingProducts = await productsCollection.find({}).sort({ status: 1}).toArray();
         res.send(pendingProducts);
       } catch(error){
         console.error('Error fetching review queue', error);
