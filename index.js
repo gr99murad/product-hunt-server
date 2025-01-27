@@ -377,6 +377,66 @@ async function run() {
         res.send({ message: 'Error fetching admin statistics', error});
       }
     });
+
+    // post api for add a coupon in coupons collection
+    const couponsCollection = client.db("productHunt").collection("coupons");
+    app.post('/coupons', async(req, res) => {
+      const { couponCode, expiryDate, description, discountAmount} = req.body;
+
+      const newCoupon = {
+        couponCode,
+        expiryDate: new Date(expiryDate),
+        description,
+        discountAmount,
+        createdAt: new Date(),
+      };
+      const result = await couponsCollection.insertOne(newCoupon);
+      res.send({ message: 'Coupon added successfully', result});
+    });
+
+    // get all coupons
+    app.get('/coupons', async (req,res) => {
+
+      const coupons = await couponsCollection.find().toArray();
+      res.send(coupons);
+    });
+
+    // Edit a coupon
+    app.put('/coupons/:id', async (req, res) => {
+      const {id} = req.params;
+      const { couponCode, expiryDate, description, discountAmount} = req.body;
+
+      const result = await couponsCollection.updateOne(
+        { _id: new ObjectId(id)},
+        {
+          $set: {
+            couponCode,
+            expiryDate: new Date(expiryDate),
+            description,
+            discountAmount,
+          },
+        }
+      );
+
+      if(result.matchedCount === 0){
+        return res.send({ message: 'Coupon not found'});
+      }
+      res.send({ message: 'Coupon updated successfully', result});
+    });
+
+    // delete a coupon
+    app.delete('/coupons/:id', async(req, res) =>{
+
+      const {id} = req.params;
+      
+      const result = await couponsCollection.deleteOne({ _id: new ObjectId(id)});
+
+      if(result.deletedCount === 0){
+        return res.send({ message: 'Coupon not found'});
+      }
+      res.send({ message: 'Coupon deleted successfully'});
+    })
+
     
     // update user role
     app.patch('/users/:email/role', async (req, res) => {
