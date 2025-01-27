@@ -330,6 +330,7 @@ async function run() {
     // update user subscription
     app.post('/subscribe/:id', async(req, res) => {
       const {id} = req.params;
+      const {discountAmount} = req.body;
 
       try{
         const result = await client.db("productHunt").collection("users").updateOne({ _id: new ObjectId(id)}, { $set: {subscribed: true}});
@@ -380,6 +381,21 @@ async function run() {
 
     // post api for add a coupon in coupons collection
     const couponsCollection = client.db("productHunt").collection("coupons");
+    // validate coupon code
+    app.post('/validateCoupon', async(req, res) => {
+      const {couponCode} = req.body;
+
+      const coupon = await couponsCollection.findOne({ couponCode});
+      if(!coupon){
+        return res.send({ message: 'Invalid coupon code'});
+      }
+      const currentDate = new Date();
+      if(coupon.expiryDate < currentDate){
+        return res.send({ message: 'Coupon expired'});
+      }
+
+      res.send({ discountAmount: coupon.discountAmount});
+    });
     app.post('/coupons', async(req, res) => {
       const { couponCode, expiryDate, description, discountAmount} = req.body;
 
@@ -428,7 +444,7 @@ async function run() {
     app.delete('/coupons/:id', async(req, res) =>{
 
       const {id} = req.params;
-      
+
       const result = await couponsCollection.deleteOne({ _id: new ObjectId(id)});
 
       if(result.deletedCount === 0){
@@ -457,6 +473,8 @@ async function run() {
       }
     });
 
+    
+
     // added user data in users collection
     app.post('/users/:email', async(req, res) => {
       const email = req.params.email
@@ -471,6 +489,7 @@ async function run() {
         const updatedUser = {
           ...user,
           role: isExist.role,
+          subscribed: isExist.subscribed || false,
         };
         const result = await usersCollection.updateOne(query, { $set: updatedUser});
         return res.send(result);
@@ -478,6 +497,7 @@ async function run() {
       const newUser = {
         ...user,
         role: 'user',
+        subscribed: false,
         timestamp: Date.now(),
       };
       const result = await usersCollection.insertOne(newUser);
