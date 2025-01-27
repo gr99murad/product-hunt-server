@@ -47,6 +47,8 @@ async function run() {
       next();
 
     };
+
+    
     // get all reported products
     app.get('/reportedProducts', async (req, res) => {
       try{
@@ -351,7 +353,31 @@ async function run() {
         console.error('Error fetching users', error);
         res.send('Error fetching users', error);
       }
-    })
+    });
+
+    // get api admin statistics 
+    app.get('/statistics',  async(req,res) => {
+      try{
+        const productCount = await client.db("productHunt").collection("products").countDocuments();
+        const acceptedCount = await client.db("productHunt").collection("products").countDocuments({ status: 'accepted'});
+        const pendingCount = await client.db("productHunt").collection("products").countDocuments({ status: 'pending'});
+        const reviewsCount = await client.db('productHunt').collection('reviews').countDocuments();
+        const userCount = await client.db("productHunt").collection("users").countDocuments();
+
+        res.send({ 
+          totalProducts: productCount,
+          accepted: acceptedCount,
+          pending: pendingCount,
+          reviews: reviewsCount,
+          users: userCount,
+        });
+
+      }catch(error){
+        console.error('Error fetching admin statistics',error);
+        res.send({ message: 'Error fetching admin statistics', error});
+      }
+    });
+    
     // update user role
     app.patch('/users/:email/role', async (req, res) => {
       const {email} = req.params;
