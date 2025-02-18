@@ -47,6 +47,23 @@ async function run() {
       next();
 
     };
+    //Best-sellers
+    const BestSellersCollection = client.db("productHunt").collection("best-sellers");
+    app.get('/best-sellers', async(req, res) => {
+      try{
+        //fetch the top 6 products sorted by sales volume 
+        const bestSellers = await productsCollection.find({}).sort({ salesVolume: -1}).limit(6).toArray();
+
+        res.send(bestSellers);
+
+      }catch(error){
+        console.error("Error fetching best sellers", error);
+        res.send({ message: "Error fetching best sellers", error});
+
+      }
+    });
+
+
 
     
     // get all reported products
