@@ -47,12 +47,24 @@ async function run() {
       next();
 
     };
+    //new arrivals api
+    app.get('/new-arrivals', async (req, res) => {
+      try{
+        // sort by latest added products
+        const newArrivals = await productsCollection.find({}).sort({timestamp: -1}).limit(6).toArray();
+        res.send(newArrivals);
+
+      }catch(error){
+        console.error('Error fetching new arrivals', error);
+        res.send({ message: 'Error fetching new arrivals',error});
+      }
+    })
     //Best-sellers
     const BestSellersCollection = client.db("productHunt").collection("best-sellers");
     app.get('/best-sellers', async(req, res) => {
       try{
         //fetch the top 6 products sorted by sales volume 
-        const bestSellers = await productsCollection.find({}).sort({ salesVolume: -1}).limit(6).toArray();
+        const bestSellers = await BestSellersCollection.find({}).sort({ salesVolume: -1}).limit(6).toArray();
 
         res.send(bestSellers);
 
