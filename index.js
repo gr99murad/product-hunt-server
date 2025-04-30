@@ -47,6 +47,35 @@ async function run() {
       next();
 
     };
+    app.post('/subscribe/:id', async (req, res) => {
+      const { id } = req.params;
+      const { planType, discountAmount } = req.body;
+    
+      // Set subscription duration (e.g., 30 days)
+      const currentDate = new Date();
+      const expiryDate = new Date(currentDate);
+      expiryDate.setDate(expiryDate.getDate() + 30); // 30-day subscription
+    
+      try {
+        const result = await client.db("productHunt").collection("users").updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              subscribed: true,
+              subscriptionDate: currentDate,
+              subscriptionExpiry: expiryDate,
+              subscriptionType: planType || 'basic',
+              discountAmount: discountAmount || 0
+            }
+          }
+        );
+        res.send({ message: 'Subscription updated successfully', result });
+      } catch (error) {
+        console.error('Error updating subscription:', error);
+        res.status(500).send({ message: 'Error updating subscription', error });
+      }
+    });
+    
     //new arrivals api
     app.get('/new-arrivals', async (req, res) => {
       try{
